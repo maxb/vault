@@ -95,7 +95,6 @@ var (
 	untunableMounts = []string{
 		cubbyholeMountPath,
 		systemMountPath,
-		"audit/",
 		identityMountPath,
 	}
 

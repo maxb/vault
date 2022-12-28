@@ -595,6 +595,44 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 		},
 
 		{
+			Pattern: "audit/(?P<path>.+?)/tune$",
+			Fields: map[string]*framework.FieldSchema{
+				"path": {
+					Type:        framework.TypeString,
+					Description: "TODO",
+				},
+				"description": {
+					Type:        framework.TypeString,
+					Description: "TODO",
+				},
+				"options": {
+					Type:        framework.TypeKVPairs,
+					Description: "TODO",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.handleAuthTuneRead,
+					Summary:     "Reads the given audit device's configuration.",
+					Description: "This endpoint requires sudo capability. Unlike auth methods, you CANNOT access the same functionality via `sys/mounts/audit/[audit-path]/tune`.",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:    b.handleAuthTuneWrite,
+					Summary:     "Tune configuration parameters for a given audit device.",
+					Description: "This endpoint requires sudo capability. Unlike auth methods, you CANNOT access the same functionality via `sys/mounts/audit/[audit-path]/tune`.",
+				},
+				//TODO
+				//logical.DeleteOperation: &framework.PathOperation{
+				//	Callback: b.handleAuditTuneDelete,
+				//},
+			},
+
+			HelpSynopsis:    "",
+			HelpDescription: "",
+		},
+
+		{
 			Pattern: "audit/(?P<path>.+)",
 
 			Fields: map[string]*framework.FieldSchema{

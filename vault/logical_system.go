@@ -1518,7 +1518,7 @@ func (b *SystemBackend) moveMount(ns *namespace.Namespace, logger log.Logger, mi
 	return nil
 }
 
-// handleAuthTuneRead is used to get config settings on a auth path
+// handleAuthTuneRead is used to get config settings on an auth path
 func (b *SystemBackend) handleAuthTuneRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	if path == "" {
@@ -1527,6 +1527,40 @@ func (b *SystemBackend) handleAuthTuneRead(ctx context.Context, req *logical.Req
 			logical.ErrInvalidRequest
 	}
 	return b.handleTuneReadCommon(ctx, "auth/"+path)
+}
+
+// handleAuditTuneRead is used to get config settings on an audit device
+func (b *SystemBackend) handleAuditTuneRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse(
+				"path must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+	path = sanitizePath(path)
+
+	// So little of the audit device logic is in common with the auth method and secrets engine logic, so we don't
+	// try to use handleTuneReadCommon here.
+
+	b.Core.auditLock.RLock()
+	defer b.Core.auditLock.RUnlock()
+
+	mountEntry, err := b.Core.audit.find(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"description": mountEntry.Description,
+		},
+	}
+
+	if len(mountEntry.Options) > 0 {
+		resp.Data["options"] = mountEntry.Options
+	}
+
+	return resp, nil
 }
 
 func (b *SystemBackend) handleRemountStatusCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1654,6 +1688,7 @@ func (b *SystemBackend) handleAuthTuneWrite(ctx context.Context, req *logical.Re
 	if path == "" {
 		return logical.ErrorResponse("missing path"), nil
 	}
+	path = sanitizePath(path)
 
 	return b.handleTuneWriteCommon(ctx, "auth/"+path, data)
 }
@@ -1664,18 +1699,34 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 	if path == "" {
 		return logical.ErrorResponse("missing path"), nil
 	}
+	path = sanitizePath(path)
 
 	// This call will write both logical backend's configuration as well as auth methods'.
-	// Retaining this behavior for backward compatibility. If this behavior is not desired,
-	// an error can be returned if path has a prefix of "auth/".
+	// Retaining this behavior for backward compatibility.
+	// However, tuning of audit devices was introduced later, and is forced to be via the dedicated API only,
+	// to maintain the restriction of "sudo" being required to modify audit methods.
+	if strings.HasPrefix(path, "audit/") {
+		b.Backend.Logger().Error("cannot tune this mount", "path", path)
+		return handleError(fmt.Errorf("cannot tune %q", path))
+	}
+
+	return b.handleTuneWriteCommon(ctx, path, data)
+}
+
+// handleAuditTuneWrite is used to set config settings on an audit device
+func (b *SystemBackend) handleAuditTuneWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("missing path"), nil
+	}
+	path = sanitizePath(path)
+
 	return b.handleTuneWriteCommon(ctx, path, data)
 }
 
 // handleTuneWriteCommon is used to set config settings on a path
 func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
-
-	path = sanitizePath(path)
 
 	// Prevent protected paths from being changed
 	for _, p := range untunableMounts {
@@ -1685,7 +1736,31 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	mountEntry := b.Core.router.MatchingMountEntry(ctx, path)
+	var lock *sync.RWMutex
+	var isAudit, isAuth bool
+	switch {
+	case strings.HasPrefix(path, credentialRoutePrefix):
+		lock = &b.Core.authLock
+		isAuth = true
+	case strings.HasPrefix(path, "audit/"):
+		lock = &b.Core.auditLock
+		isAudit = true
+	default:
+		lock = &b.Core.mountsLock
+	}
+
+	var mountEntry *MountEntry
+	var err error
+	if isAudit {
+		b.Core.auditLock.RLock()
+		mountEntry, err = b.Core.audit.find(ctx, path[len("audit/"):])
+		b.Core.auditLock.RUnlock()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		mountEntry = b.Core.router.MatchingMountEntry(ctx, path)
+	}
 	if mountEntry == nil {
 		b.Backend.Logger().Error("tune failed", "error", "no mount entry found", "path", path)
 		return handleError(fmt.Errorf("tune of path %q failed: no mount entry found", path))
@@ -1694,19 +1769,18 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		return nil, logical.ErrReadOnly
 	}
 
-	var lock *sync.RWMutex
-	switch {
-	case strings.HasPrefix(path, credentialRoutePrefix):
-		lock = &b.Core.authLock
-	default:
-		lock = &b.Core.mountsLock
-	}
-
 	lock.Lock()
 	defer lock.Unlock()
 
 	// Check again after grabbing the lock
-	mountEntry = b.Core.router.MatchingMountEntry(ctx, path)
+	if isAudit {
+		mountEntry, err = b.Core.audit.find(ctx, path[len("audit/"):])
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		mountEntry = b.Core.router.MatchingMountEntry(ctx, path)
+	}
 	if mountEntry == nil {
 		b.Backend.Logger().Error("tune failed", "error", "no mount entry found", "path", path)
 		return handleError(fmt.Errorf("tune of path %q failed: no mount entry found", path))
@@ -1716,7 +1790,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	// Timing configuration parameters
-	{
+	if !isAudit {
 		var newDefault, newMax time.Duration
 		defTTL := data.Get("default_lease_ttl").(string)
 		switch defTTL {
@@ -1757,7 +1831,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	// user-lockout config
-	{
+	if !isAudit {
 		var apiuserLockoutConfig APIUserLockoutConfig
 
 		userLockoutConfigMap := data.Get("user_lockout_config").(map[string]interface{})
@@ -1861,6 +1935,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 
 	}
+
 	if rawVal, ok := data.GetOk("description"); ok {
 		description := rawVal.(string)
 
@@ -1870,8 +1945,10 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		// Update the mount table
 		var err error
 		switch {
-		case strings.HasPrefix(path, "auth/"):
+		case isAuth:
 			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		case isAudit:
+			err = b.Core.persistAudit(ctx, b.Core.audit, &mountEntry.Local)
 		default:
 			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
 		}
@@ -1884,240 +1961,241 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	if rawVal, ok := data.GetOk("plugin_version"); ok {
-		version := rawVal.(string)
-		semanticVersion, err := semver.NewVersion(version)
-		if err != nil {
-			return logical.ErrorResponse("version %q is not a valid semantic version: %s", version, err), nil
-		}
-		version = "v" + semanticVersion.String()
+	if !isAudit {
+		if rawVal, ok := data.GetOk("plugin_version"); ok {
+			version := rawVal.(string)
+			semanticVersion, err := semver.NewVersion(version)
+			if err != nil {
+				return logical.ErrorResponse("version %q is not a valid semantic version: %s", version, err), nil
+			}
+			version = "v" + semanticVersion.String()
 
-		// Lookup the version to ensure it exists in the catalog before committing.
-		pluginType := consts.PluginTypeSecrets
-		if strings.HasPrefix(path, "auth/") {
-			pluginType = consts.PluginTypeCredential
-		}
-		_, err = b.System().LookupPluginVersion(ctx, mountEntry.Type, pluginType, version)
-		if err != nil {
-			return handleError(err)
+			// Lookup the version to ensure it exists in the catalog before committing.
+			pluginType := consts.PluginTypeSecrets
+			if isAuth {
+				pluginType = consts.PluginTypeCredential
+			}
+			_, err = b.System().LookupPluginVersion(ctx, mountEntry.Type, pluginType, version)
+			if err != nil {
+				return handleError(err)
+			}
+
+			oldVersion := mountEntry.Version
+			mountEntry.Version = version
+
+			// Update the mount table
+			switch {
+			case isAuth:
+				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+			default:
+				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+			}
+			if err != nil {
+				mountEntry.Version = oldVersion
+				return handleError(err)
+			}
+			if b.Core.logger.IsInfo() {
+				b.Core.logger.Info("mount tuning of version successful", "path", path, "version", version)
+			}
 		}
 
-		oldVersion := mountEntry.Version
-		mountEntry.Version = version
+		if rawVal, ok := data.GetOk("audit_non_hmac_request_keys"); ok {
+			auditNonHMACRequestKeys := rawVal.([]string)
 
-		// Update the mount table
-		switch {
-		case strings.HasPrefix(path, "auth/"):
-			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
-		default:
-			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+			oldVal := mountEntry.Config.AuditNonHMACRequestKeys
+			mountEntry.Config.AuditNonHMACRequestKeys = auditNonHMACRequestKeys
+
+			// Update the mount table
+			var err error
+			switch {
+			case isAuth:
+				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+			default:
+				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+			}
+			if err != nil {
+				mountEntry.Config.AuditNonHMACRequestKeys = oldVal
+				return handleError(err)
+			}
+
+			mountEntry.SyncCache()
+
+			if b.Core.logger.IsInfo() {
+				b.Core.logger.Info("mount tuning of audit_non_hmac_request_keys successful", "path", path)
+			}
 		}
-		if err != nil {
-			mountEntry.Version = oldVersion
-			return handleError(err)
+
+		if rawVal, ok := data.GetOk("audit_non_hmac_response_keys"); ok {
+			auditNonHMACResponseKeys := rawVal.([]string)
+
+			oldVal := mountEntry.Config.AuditNonHMACResponseKeys
+			mountEntry.Config.AuditNonHMACResponseKeys = auditNonHMACResponseKeys
+
+			// Update the mount table
+			var err error
+			switch {
+			case isAuth:
+				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+			default:
+				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+			}
+			if err != nil {
+				mountEntry.Config.AuditNonHMACResponseKeys = oldVal
+				return handleError(err)
+			}
+
+			mountEntry.SyncCache()
+
+			if b.Core.logger.IsInfo() {
+				b.Core.logger.Info("mount tuning of audit_non_hmac_response_keys successful", "path", path)
+			}
 		}
-		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("mount tuning of version successful", "path", path, "version", version)
+
+		if rawVal, ok := data.GetOk("listing_visibility"); ok {
+			lvString := rawVal.(string)
+			listingVisibility := ListingVisibilityType(lvString)
+
+			if err := checkListingVisibility(listingVisibility); err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", listingVisibility)), nil
+			}
+
+			oldVal := mountEntry.Config.ListingVisibility
+			mountEntry.Config.ListingVisibility = listingVisibility
+
+			// Update the mount table
+			var err error
+			switch {
+			case isAuth:
+				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+			default:
+				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+			}
+			if err != nil {
+				mountEntry.Config.ListingVisibility = oldVal
+				return handleError(err)
+			}
+
+			if b.Core.logger.IsInfo() {
+				b.Core.logger.Info("mount tuning of listing_visibility successful", "path", path)
+			}
+		}
+
+		if rawVal, ok := data.GetOk("token_type"); ok {
+			if !isAuth {
+				return logical.ErrorResponse(fmt.Sprintf("'token_type' can only be modified on auth mounts")), logical.ErrInvalidRequest
+			}
+			if mountEntry.Type == "token" || mountEntry.Type == "ns_token" {
+				return logical.ErrorResponse(fmt.Sprintf("'token_type' cannot be set for 'token' or 'ns_token' auth mounts")), logical.ErrInvalidRequest
+			}
+
+			tokenType := logical.TokenTypeDefaultService
+			ttString := rawVal.(string)
+
+			switch ttString {
+			case "", "default-service":
+			case "default-batch":
+				tokenType = logical.TokenTypeDefaultBatch
+			case "service":
+				tokenType = logical.TokenTypeService
+			case "batch":
+				tokenType = logical.TokenTypeBatch
+			default:
+				return logical.ErrorResponse(fmt.Sprintf(
+					"invalid value for 'token_type'")), logical.ErrInvalidRequest
+			}
+
+			oldVal := mountEntry.Config.TokenType
+			mountEntry.Config.TokenType = tokenType
+
+			// Update the mount table
+			if err := b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local); err != nil {
+				mountEntry.Config.TokenType = oldVal
+				return handleError(err)
+			}
+
+			if b.Core.logger.IsInfo() {
+				b.Core.logger.Info("mount tuning of token_type successful", "path", path, "token_type", ttString)
+			}
+		}
+
+		if rawVal, ok := data.GetOk("passthrough_request_headers"); ok {
+			headers := rawVal.([]string)
+
+			oldVal := mountEntry.Config.PassthroughRequestHeaders
+			mountEntry.Config.PassthroughRequestHeaders = headers
+
+			// Update the mount table
+			var err error
+			switch {
+			case isAuth:
+				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+			default:
+				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+			}
+			if err != nil {
+				mountEntry.Config.PassthroughRequestHeaders = oldVal
+				return handleError(err)
+			}
+
+			mountEntry.SyncCache()
+
+			if b.Core.logger.IsInfo() {
+				b.Core.logger.Info("mount tuning of passthrough_request_headers successful", "path", path)
+			}
+		}
+
+		if rawVal, ok := data.GetOk("allowed_response_headers"); ok {
+			headers := rawVal.([]string)
+			oldVal := mountEntry.Config.AllowedResponseHeaders
+			mountEntry.Config.AllowedResponseHeaders = headers
+
+			// Update the mount table
+			var err error
+			switch {
+			case isAuth:
+				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+			default:
+				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+			}
+			if err != nil {
+				mountEntry.Config.AllowedResponseHeaders = oldVal
+				return handleError(err)
+			}
+
+			mountEntry.SyncCache()
+
+			if b.Core.logger.IsInfo() {
+				b.Core.logger.Info("mount tuning of allowed_response_headers successful", "path", path)
+			}
+		}
+
+		if rawVal, ok := data.GetOk("allowed_managed_keys"); ok {
+			allowedManagedKeys := rawVal.([]string)
+
+			oldVal := mountEntry.Config.AllowedManagedKeys
+			mountEntry.Config.AllowedManagedKeys = allowedManagedKeys
+
+			// Update the mount table
+			var err error
+			switch {
+			case isAuth:
+				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+			default:
+				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+			}
+			if err != nil {
+				mountEntry.Config.AllowedManagedKeys = oldVal
+				return handleError(err)
+			}
+
+			mountEntry.SyncCache()
+
+			if b.Core.logger.IsInfo() {
+				b.Core.logger.Info("mount tuning of allowed_managed_keys successful", "path", path)
+			}
 		}
 	}
 
-	if rawVal, ok := data.GetOk("audit_non_hmac_request_keys"); ok {
-		auditNonHMACRequestKeys := rawVal.([]string)
-
-		oldVal := mountEntry.Config.AuditNonHMACRequestKeys
-		mountEntry.Config.AuditNonHMACRequestKeys = auditNonHMACRequestKeys
-
-		// Update the mount table
-		var err error
-		switch {
-		case strings.HasPrefix(path, "auth/"):
-			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
-		default:
-			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
-		}
-		if err != nil {
-			mountEntry.Config.AuditNonHMACRequestKeys = oldVal
-			return handleError(err)
-		}
-
-		mountEntry.SyncCache()
-
-		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("mount tuning of audit_non_hmac_request_keys successful", "path", path)
-		}
-	}
-
-	if rawVal, ok := data.GetOk("audit_non_hmac_response_keys"); ok {
-		auditNonHMACResponseKeys := rawVal.([]string)
-
-		oldVal := mountEntry.Config.AuditNonHMACResponseKeys
-		mountEntry.Config.AuditNonHMACResponseKeys = auditNonHMACResponseKeys
-
-		// Update the mount table
-		var err error
-		switch {
-		case strings.HasPrefix(path, "auth/"):
-			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
-		default:
-			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
-		}
-		if err != nil {
-			mountEntry.Config.AuditNonHMACResponseKeys = oldVal
-			return handleError(err)
-		}
-
-		mountEntry.SyncCache()
-
-		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("mount tuning of audit_non_hmac_response_keys successful", "path", path)
-		}
-	}
-
-	if rawVal, ok := data.GetOk("listing_visibility"); ok {
-		lvString := rawVal.(string)
-		listingVisibility := ListingVisibilityType(lvString)
-
-		if err := checkListingVisibility(listingVisibility); err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", listingVisibility)), nil
-		}
-
-		oldVal := mountEntry.Config.ListingVisibility
-		mountEntry.Config.ListingVisibility = listingVisibility
-
-		// Update the mount table
-		var err error
-		switch {
-		case strings.HasPrefix(path, "auth/"):
-			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
-		default:
-			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
-		}
-		if err != nil {
-			mountEntry.Config.ListingVisibility = oldVal
-			return handleError(err)
-		}
-
-		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("mount tuning of listing_visibility successful", "path", path)
-		}
-	}
-
-	if rawVal, ok := data.GetOk("token_type"); ok {
-		if !strings.HasPrefix(path, "auth/") {
-			return logical.ErrorResponse(fmt.Sprintf("'token_type' can only be modified on auth mounts")), logical.ErrInvalidRequest
-		}
-		if mountEntry.Type == "token" || mountEntry.Type == "ns_token" {
-			return logical.ErrorResponse(fmt.Sprintf("'token_type' cannot be set for 'token' or 'ns_token' auth mounts")), logical.ErrInvalidRequest
-		}
-
-		tokenType := logical.TokenTypeDefaultService
-		ttString := rawVal.(string)
-
-		switch ttString {
-		case "", "default-service":
-		case "default-batch":
-			tokenType = logical.TokenTypeDefaultBatch
-		case "service":
-			tokenType = logical.TokenTypeService
-		case "batch":
-			tokenType = logical.TokenTypeBatch
-		default:
-			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid value for 'token_type'")), logical.ErrInvalidRequest
-		}
-
-		oldVal := mountEntry.Config.TokenType
-		mountEntry.Config.TokenType = tokenType
-
-		// Update the mount table
-		if err := b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local); err != nil {
-			mountEntry.Config.TokenType = oldVal
-			return handleError(err)
-		}
-
-		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("mount tuning of token_type successful", "path", path, "token_type", ttString)
-		}
-	}
-
-	if rawVal, ok := data.GetOk("passthrough_request_headers"); ok {
-		headers := rawVal.([]string)
-
-		oldVal := mountEntry.Config.PassthroughRequestHeaders
-		mountEntry.Config.PassthroughRequestHeaders = headers
-
-		// Update the mount table
-		var err error
-		switch {
-		case strings.HasPrefix(path, "auth/"):
-			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
-		default:
-			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
-		}
-		if err != nil {
-			mountEntry.Config.PassthroughRequestHeaders = oldVal
-			return handleError(err)
-		}
-
-		mountEntry.SyncCache()
-
-		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("mount tuning of passthrough_request_headers successful", "path", path)
-		}
-	}
-
-	if rawVal, ok := data.GetOk("allowed_response_headers"); ok {
-		headers := rawVal.([]string)
-		oldVal := mountEntry.Config.AllowedResponseHeaders
-		mountEntry.Config.AllowedResponseHeaders = headers
-
-		// Update the mount table
-		var err error
-		switch {
-		case strings.HasPrefix(path, "auth/"):
-			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
-		default:
-			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
-		}
-		if err != nil {
-			mountEntry.Config.AllowedResponseHeaders = oldVal
-			return handleError(err)
-		}
-
-		mountEntry.SyncCache()
-
-		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("mount tuning of allowed_response_headers successful", "path", path)
-		}
-	}
-
-	if rawVal, ok := data.GetOk("allowed_managed_keys"); ok {
-		allowedManagedKeys := rawVal.([]string)
-
-		oldVal := mountEntry.Config.AllowedManagedKeys
-		mountEntry.Config.AllowedManagedKeys = allowedManagedKeys
-
-		// Update the mount table
-		var err error
-		switch {
-		case strings.HasPrefix(path, "auth/"):
-			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
-		default:
-			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
-		}
-		if err != nil {
-			mountEntry.Config.AllowedManagedKeys = oldVal
-			return handleError(err)
-		}
-
-		mountEntry.SyncCache()
-
-		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("mount tuning of allowed_managed_keys successful", "path", path)
-		}
-	}
-
-	var err error
 	var resp *logical.Response
 	var options map[string]string
 	if optionsRaw, ok := data.GetOk("options"); ok {
@@ -2127,12 +2205,12 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	if len(options) > 0 {
 		b.Core.logger.Info("mount tuning of options", "path", path, "options", options)
 		newOptions := make(map[string]string)
-		var kvUpgraded bool
+		var kvUpgraded, auditChanged bool
 
 		// The version options should only apply to the KV mount, check that first
 		if v, ok := options["version"]; ok {
 			// Special case to make sure we can not disable versioning once it's
-			// enabled. If the vkv backend suports downgrading this can be removed.
+			// enabled. If the kv backend supports downgrading this can be removed.
 			meVersion, err := parseutil.ParseInt(mountEntry.Options["version"])
 			if err != nil {
 				return nil, fmt.Errorf("unable to parse mount entry: %w", err)
@@ -2181,8 +2259,11 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		oldVal := mountEntry.Options
 		mountEntry.Options = newOptions
 		switch {
-		case strings.HasPrefix(path, "auth/"):
+		case isAuth:
 			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		case isAudit:
+			err = b.Core.persistAudit(ctx, b.Core.audit, &mountEntry.Local)
+			auditChanged = true
 		default:
 			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
 		}
@@ -2198,6 +2279,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			if err != nil {
 				b.Core.logger.Error("mount tuning of options: could not reload backend", "error", err, "path", path, "options", options)
 			}
+		}
+		if auditChanged {
 
 		}
 	}
