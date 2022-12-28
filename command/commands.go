@@ -281,6 +281,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"audit tune": func() (cli.Command, error) {
+			return &AuditTuneCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"auth tune": func() (cli.Command, error) {
 			return &AuthTuneCommand{
 				BaseCommand: getBaseCommand(),

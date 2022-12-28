@@ -136,6 +136,26 @@ func (c *Sys) DisableAuditWithContext(ctx context.Context, path string) error {
 	return err
 }
 
+func (c *Sys) TuneAudit(path string, config AuditConfigInput) error {
+	return c.TuneAuditWithContext(context.Background(), path, config)
+}
+
+func (c *Sys) TuneAuditWithContext(ctx context.Context, path string, config AuditConfigInput) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/audit/%s/tune", path))
+	if err := r.SetJSONBody(config); err != nil {
+		return err
+	}
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+	return err
+}
+
 // Structures for the requests/response are all down here. They aren't
 // individually documented because the map almost directly to the raw HTTP API
 // documentation. Please refer to that documentation for more details.
@@ -153,4 +173,9 @@ type Audit struct {
 	Options     map[string]string `json:"options" mapstructure:"options"`
 	Local       bool              `json:"local" mapstructure:"local"`
 	Path        string            `json:"path" mapstructure:"path"`
+}
+
+type AuditConfigInput struct {
+	Options     map[string]string `json:"options" mapstructure:"options"`
+	Description *string           `json:"description,omitempty" mapstructure:"description"`
 }
