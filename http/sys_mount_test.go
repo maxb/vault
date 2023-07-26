@@ -1120,14 +1120,14 @@ func TestSysTuneMount(t *testing.T) {
 	}
 
 	// First try with lease above backend max
-	resp = testHttpPut(t, token, addr+"/v1/secret/leased-kv", map[string]interface{}{
+	resp = testHttpPut(t, token, addr+"/v1/leased-kv/foo", map[string]interface{}{
 		"data": "bar",
 		"ttl":  "28347h",
 	})
 	testResponseStatus(t, resp, 204)
 
 	// read secret
-	resp = testHttpGet(t, token, addr+"/v1/secret/leased-kv")
+	resp = testHttpGet(t, token, addr+"/v1/leased-kv/foo")
 	var result struct {
 		LeaseID       string `json:"lease_id" structs:"lease_id"`
 		LeaseDuration int    `json:"lease_duration" structs:"lease_duration"`
@@ -1145,13 +1145,13 @@ func TestSysTuneMount(t *testing.T) {
 	}
 
 	// Now with lease TTL unspecified
-	resp = testHttpPut(t, token, addr+"/v1/secret/leased-kv", map[string]interface{}{
+	resp = testHttpPut(t, token, addr+"/v1/leased-kv/foo", map[string]interface{}{
 		"data": "bar",
 	})
 	testResponseStatus(t, resp, 204)
 
 	// read secret
-	resp = testHttpGet(t, token, addr+"/v1/secret/leased-kv")
+	resp = testHttpGet(t, token, addr+"/v1/leased-kv/foo")
 
 	testResponseBody(t, resp, &result)
 
