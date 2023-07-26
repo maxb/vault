@@ -11,7 +11,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
@@ -32,11 +31,8 @@ func testCore_NewTestCoreLicensing(t *testing.T, seal Seal, licensingConfig *Lic
 		t.Fatal(err)
 	}
 	conf := &CoreConfig{
-		Physical:     inm,
-		DisableMlock: true,
-		LogicalBackends: map[string]logical.Factory{
-			"kv": LeasedPassthroughBackendFactory,
-		},
+		Physical:        inm,
+		DisableMlock:    true,
 		Seal:            seal,
 		LicensingConfig: licensingConfig,
 	}

@@ -7,20 +7,12 @@ package osutil
 
 import (
 	"os"
-	"os/user"
-	"strconv"
+	"syscall"
 	"testing"
 )
 
 func TestFileUIDEqual(t *testing.T) {
-	currentUser, err := user.Current()
-	if err != nil {
-		t.Errorf("failed to get details of current process owner. The error is: %v", err)
-	}
-	uid, err := strconv.Atoi(currentUser.Uid)
-	if err != nil {
-		t.Errorf("failed to convert uid to int. The error is: %v", err)
-	}
+	uid := syscall.Geteuid()
 
 	testCases := []struct {
 		uid      int
@@ -58,14 +50,7 @@ func TestFileUIDEqual(t *testing.T) {
 }
 
 func TestFileGIDEqual(t *testing.T) {
-	currentUser, err := user.Current()
-	if err != nil {
-		t.Errorf("failed to get details of current process owner. The error is: %v", err)
-	}
-	gid, err := strconv.Atoi(currentUser.Gid)
-	if err != nil {
-		t.Errorf("failed to convert gid to int. The error is: %v", err)
-	}
+	gid := syscall.Getegid()
 
 	testCases := []struct {
 		gid      int

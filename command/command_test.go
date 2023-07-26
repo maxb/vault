@@ -13,12 +13,8 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/builtin/logical/pki"
-	"github.com/hashicorp/vault/builtin/logical/ssh"
-	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -28,28 +24,19 @@ import (
 	"github.com/mitchellh/cli"
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
 )
 
 var (
 	defaultVaultLogger = log.NewNullLogger()
 
-	defaultVaultCredentialBackends = map[string]logical.Factory{
-		"userpass": credUserpass.Factory,
-	}
+	defaultVaultCredentialBackends = map[string]logical.Factory{}
 
 	defaultVaultAuditBackends = map[string]audit.Factory{
 		"file": auditFile.Factory,
 	}
 
-	defaultVaultLogicalBackends = map[string]logical.Factory{
-		"generic-leased": vault.LeasedPassthroughBackendFactory,
-		"pki":            pki.Factory,
-		"ssh":            ssh.Factory,
-		"transit":        transit.Factory,
-		"kv":             kv.Factory,
-	}
+	defaultVaultLogicalBackends = map[string]logical.Factory{}
 )
 
 // assertNoTabs asserts the CLI help has no tab characters.

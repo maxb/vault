@@ -82,7 +82,8 @@ func TestLeaseRevokeCommand_Run(t *testing.T) {
 				defer closer()
 
 				if err := client.Sys().Mount("secret-leased", &api.MountInput{
-					Type: "generic-leased",
+					Type:    "kv",
+					Options: map[string]string{"leased_passthrough": "true"},
 				}); err != nil {
 					t.Fatal(err)
 				}

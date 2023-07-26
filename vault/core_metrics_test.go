@@ -15,18 +15,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/armon/go-metrics"
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestCoreMetrics_KvSecretGauge(t *testing.T) {
-	// Use the real KV implementation instead of Passthrough
-	AddTestLogicalBackend("kv", logicalKv.Factory)
-	// Clean up for the next test-- is there a better way?
-	defer func() {
-		delete(testLogicalBackends, "kv")
-	}()
 	core, _, root := TestCoreUnsealed(t)
 
 	testMounts := []struct {
@@ -154,12 +147,6 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 }
 
 func TestCoreMetrics_KvSecretGauge_BadPath(t *testing.T) {
-	// Use the real KV implementation instead of Passthrough
-	AddTestLogicalBackend("kv", logicalKv.Factory)
-	// Clean up for the next test.
-	defer func() {
-		delete(testLogicalBackends, "kv")
-	}()
 	core, _, _ := TestCoreUnsealed(t)
 
 	me := &MountEntry{

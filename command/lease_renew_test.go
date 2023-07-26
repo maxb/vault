@@ -26,7 +26,8 @@ func testLeaseRenewCommand(tb testing.TB) (*cli.MockUi, *LeaseRenewCommand) {
 // the leaseID of an item.
 func testLeaseRenewCommandMountAndLease(tb testing.TB, client *api.Client) string {
 	if err := client.Sys().Mount("testing", &api.MountInput{
-		Type: "generic-leased",
+		Type:    "kv",
+		Options: map[string]string{"leased_passthrough": "true"},
 	}); err != nil {
 		tb.Fatal(err)
 	}

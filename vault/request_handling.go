@@ -1114,21 +1114,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 		switch matchingMountEntry.Type {
 		case "kv", "generic":
-			// If we are kv type, first see if we are an older passthrough
-			// backend, and otherwise check the mount entry options.
-			matchingBackend := c.router.MatchingBackend(ctx, req.Path)
-			if matchingBackend == nil {
-				c.logger.Error("unable to retrieve kv backend from router")
-				retErr = multierror.Append(retErr, ErrInternalError)
-				return nil, auth, retErr
-			}
-
-			if ptbe, ok := matchingBackend.(*PassthroughBackend); ok {
-				if !ptbe.GeneratesLeases() {
-					registerLease = false
-					resp.Secret.Renewable = false
-				}
-			} else if matchingMountEntry.Options == nil || matchingMountEntry.Options["leased_passthrough"] != "true" {
+			if matchingMountEntry.Options == nil || matchingMountEntry.Options["leased_passthrough"] != "true" {
 				registerLease = false
 				resp.Secret.Renewable = false
 			}

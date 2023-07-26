@@ -13,13 +13,12 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	agentapprole "github.com/hashicorp/vault/command/agentproxyshared/auth/approle"
-	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
@@ -27,7 +26,6 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -44,16 +42,7 @@ path "/auth/token/create" {
 func TestCache_UsingAutoAuthToken(t *testing.T) {
 	var err error
 	logger := logging.NewVaultLogger(log.Trace)
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": vault.LeasedPassthroughBackendFactory,
-		},
-		CredentialBackends: map[string]logical.Factory{
-			"approle": credAppRole.Factory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
 
@@ -73,7 +62,8 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	os.Setenv(api.EnvVaultCACert, fmt.Sprintf("%s/ca_cert.pem", cluster.TempDir))
 
 	err = client.Sys().Mount("kv", &api.MountInput{
-		Type: "kv",
+		Type:    "kv",
+		Options: map[string]string{"leased_passthrough": "true"},
 	})
 	if err != nil {
 		t.Fatal(err)

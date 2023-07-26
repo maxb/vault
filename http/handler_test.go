@@ -420,6 +420,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"plugin_version":         "",
 				"running_sha256":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"deprecation_status":     "supported",
 			},
 			"sys/": map[string]interface{}{
 				"description":             "system endpoints used for control, policy and debugging",
@@ -472,72 +473,9 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			},
 		},
-		"secret/": map[string]interface{}{
-			"description":             "key/value secret storage",
-			"type":                    "kv",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                map[string]interface{}{"version": "1"},
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
-		},
-		"sys/": map[string]interface{}{
-			"description":             "system endpoints used for control, policy and debugging",
-			"type":                    "system",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Accept"},
-			},
-			"local":                  false,
-			"seal_wrap":              true,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.DefaultBuiltinVersion,
-		},
-		"cubbyhole/": map[string]interface{}{
-			"description":             "per-token private secret storage",
-			"type":                    "cubbyhole",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  true,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
-		},
-		"identity/": map[string]interface{}{
-			"description":             "identity store",
-			"type":                    "identity",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Authorization"},
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
-		},
+	}
+	for k, v := range expected["data"].(map[string]interface{}) {
+		expected[k] = v
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)

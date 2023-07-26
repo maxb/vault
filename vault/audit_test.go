@@ -16,7 +16,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -69,11 +69,13 @@ func TestCore_EnableAudit(t *testing.T) {
 	}
 
 	conf := &CoreConfig{
-		Physical:      c.physical,
-		AuditBackends: make(map[string]audit.Factory),
-		DisableMlock:  true,
+		Physical: c.physical,
+		AuditBackends: map[string]audit.Factory{
+			"noop": corehelpers.NoopAuditFactory(nil),
+		},
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		DisableMlock:    true,
 	}
-	conf.AuditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)

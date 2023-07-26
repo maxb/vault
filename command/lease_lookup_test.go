@@ -26,7 +26,8 @@ func testLeaseLookupCommand(tb testing.TB) (*cli.MockUi, *LeaseLookupCommand) {
 // the leaseID of an item.
 func testLeaseLookupCommandMountAndLease(tb testing.TB, client *api.Client) string {
 	if err := client.Sys().Mount("testing", &api.MountInput{
-		Type: "generic-leased",
+		Type:    "kv",
+		Options: map[string]string{"leased_passthrough": "true"},
 	}); err != nil {
 		tb.Fatal(err)
 	}

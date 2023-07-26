@@ -16,15 +16,24 @@ func TestSysRenew(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
+	// mount a KV with leases enabled
+	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/leased-kv", map[string]interface{}{
+		"type": "kv",
+		"options": map[string]interface{}{
+			"leased_passthrough": "true",
+		},
+	})
+	testResponseStatus(t, resp, 204)
+
 	// write secret
-	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
-		"data":  "bar",
-		"lease": "1h",
+	resp = testHttpPut(t, token, addr+"/v1/leased-kv/foo", map[string]interface{}{
+		"data": "bar",
+		"ttl":  "1h",
 	})
 	testResponseStatus(t, resp, 204)
 
 	// read secret
-	resp = testHttpGet(t, token, addr+"/v1/secret/foo")
+	resp = testHttpGet(t, token, addr+"/v1/leased-kv/foo")
 	var result struct {
 		LeaseID string `json:"lease_id"`
 	}

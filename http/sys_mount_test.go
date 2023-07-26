@@ -50,6 +50,7 @@ func TestSysMounts(t *testing.T) {
 				"plugin_version":         "",
 				"running_sha256":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"deprecation_status":     "supported",
 			},
 			"sys/": map[string]interface{}{
 				"description":             "system endpoints used for control, policy and debugging",
@@ -102,72 +103,9 @@ func TestSysMounts(t *testing.T) {
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			},
 		},
-		"secret/": map[string]interface{}{
-			"description":             "key/value secret storage",
-			"type":                    "kv",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                map[string]interface{}{"version": "1"},
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
-		},
-		"sys/": map[string]interface{}{
-			"description":             "system endpoints used for control, policy and debugging",
-			"type":                    "system",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Accept"},
-			},
-			"local":                  false,
-			"seal_wrap":              true,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.DefaultBuiltinVersion,
-		},
-		"cubbyhole/": map[string]interface{}{
-			"description":             "per-token private secret storage",
-			"type":                    "cubbyhole",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  true,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
-		},
-		"identity/": map[string]interface{}{
-			"description":             "identity store",
-			"type":                    "identity",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Authorization"},
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
-		},
+	}
+	for k, v := range expected["data"].(map[string]interface{}) {
+		expected[k] = v
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -231,6 +169,7 @@ func TestSysMount(t *testing.T) {
 				"plugin_version":         "",
 				"running_sha256":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"deprecation_status":     "supported",
 			},
 			"secret/": map[string]interface{}{
 				"description":             "key/value secret storage",
@@ -247,6 +186,7 @@ func TestSysMount(t *testing.T) {
 				"plugin_version":         "",
 				"running_sha256":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"deprecation_status":     "supported",
 			},
 			"sys/": map[string]interface{}{
 				"description":             "system endpoints used for control, policy and debugging",
@@ -299,88 +239,9 @@ func TestSysMount(t *testing.T) {
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			},
 		},
-		"foo/": map[string]interface{}{
-			"description":             "foo",
-			"type":                    "kv",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                map[string]interface{}{"version": "1"},
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
-		},
-		"secret/": map[string]interface{}{
-			"description":             "key/value secret storage",
-			"type":                    "kv",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                map[string]interface{}{"version": "1"},
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
-		},
-		"sys/": map[string]interface{}{
-			"description":             "system endpoints used for control, policy and debugging",
-			"type":                    "system",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Accept"},
-			},
-			"local":                  false,
-			"seal_wrap":              true,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.DefaultBuiltinVersion,
-		},
-		"cubbyhole/": map[string]interface{}{
-			"description":             "per-token private secret storage",
-			"type":                    "cubbyhole",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  true,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
-		},
-		"identity/": map[string]interface{}{
-			"description":             "identity store",
-			"type":                    "identity",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Authorization"},
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
-		},
+	}
+	for k, v := range expected["data"].(map[string]interface{}) {
+		expected[k] = v
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -545,6 +406,7 @@ func TestSysRemount(t *testing.T) {
 				"plugin_version":         "",
 				"running_sha256":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"deprecation_status":     "supported",
 			},
 			"secret/": map[string]interface{}{
 				"description":             "key/value secret storage",
@@ -561,6 +423,7 @@ func TestSysRemount(t *testing.T) {
 				"plugin_version":         "",
 				"running_sha256":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"deprecation_status":     "supported",
 			},
 			"sys/": map[string]interface{}{
 				"description":             "system endpoints used for control, policy and debugging",
@@ -613,88 +476,9 @@ func TestSysRemount(t *testing.T) {
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			},
 		},
-		"bar/": map[string]interface{}{
-			"description":             "foo",
-			"type":                    "kv",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                map[string]interface{}{},
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
-		},
-		"secret/": map[string]interface{}{
-			"description":             "key/value secret storage",
-			"type":                    "kv",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                map[string]interface{}{"version": "1"},
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
-		},
-		"sys/": map[string]interface{}{
-			"description":             "system endpoints used for control, policy and debugging",
-			"type":                    "system",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Accept"},
-			},
-			"local":                  false,
-			"seal_wrap":              true,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.DefaultBuiltinVersion,
-		},
-		"cubbyhole/": map[string]interface{}{
-			"description":             "per-token private secret storage",
-			"type":                    "cubbyhole",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  true,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
-		},
-		"identity/": map[string]interface{}{
-			"description":             "identity store",
-			"type":                    "identity",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Authorization"},
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
-		},
+	}
+	for k, v := range expected["data"].(map[string]interface{}) {
+		expected[k] = v
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -758,6 +542,7 @@ func TestSysUnmount(t *testing.T) {
 				"plugin_version":         "",
 				"running_sha256":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"deprecation_status":     "supported",
 			},
 			"sys/": map[string]interface{}{
 				"description":             "system endpoints used for control, policy and debugging",
@@ -810,72 +595,9 @@ func TestSysUnmount(t *testing.T) {
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			},
 		},
-		"secret/": map[string]interface{}{
-			"description":             "key/value secret storage",
-			"type":                    "kv",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                map[string]interface{}{"version": "1"},
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
-		},
-		"sys/": map[string]interface{}{
-			"description":             "system endpoints used for control, policy and debugging",
-			"type":                    "system",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Accept"},
-			},
-			"local":                  false,
-			"seal_wrap":              true,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.DefaultBuiltinVersion,
-		},
-		"cubbyhole/": map[string]interface{}{
-			"description":             "per-token private secret storage",
-			"type":                    "cubbyhole",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  true,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
-		},
-		"identity/": map[string]interface{}{
-			"description":             "identity store",
-			"type":                    "identity",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Authorization"},
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
-		},
+	}
+	for k, v := range expected["data"].(map[string]interface{}) {
+		expected[k] = v
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -1025,6 +747,7 @@ func TestSysTuneMount(t *testing.T) {
 				"plugin_version":         "",
 				"running_sha256":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"deprecation_status":     "supported",
 			},
 			"secret/": map[string]interface{}{
 				"description":             "key/value secret storage",
@@ -1041,6 +764,7 @@ func TestSysTuneMount(t *testing.T) {
 				"plugin_version":         "",
 				"running_sha256":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"deprecation_status":     "supported",
 			},
 			"sys/": map[string]interface{}{
 				"description":             "system endpoints used for control, policy and debugging",
@@ -1093,88 +817,9 @@ func TestSysTuneMount(t *testing.T) {
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			},
 		},
-		"foo/": map[string]interface{}{
-			"description":             "foo",
-			"type":                    "kv",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                map[string]interface{}{},
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
-		},
-		"secret/": map[string]interface{}{
-			"description":             "key/value secret storage",
-			"type":                    "kv",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                map[string]interface{}{"version": "1"},
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
-		},
-		"sys/": map[string]interface{}{
-			"description":             "system endpoints used for control, policy and debugging",
-			"type":                    "system",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Accept"},
-			},
-			"local":                  false,
-			"seal_wrap":              true,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.DefaultBuiltinVersion,
-		},
-		"cubbyhole/": map[string]interface{}{
-			"description":             "per-token private secret storage",
-			"type":                    "cubbyhole",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  true,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
-		},
-		"identity/": map[string]interface{}{
-			"description":             "identity store",
-			"type":                    "identity",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Authorization"},
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
-		},
+	}
+	for k, v := range expected["data"].(map[string]interface{}) {
+		expected[k] = v
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -1264,6 +909,7 @@ func TestSysTuneMount(t *testing.T) {
 				"plugin_version":         "",
 				"running_sha256":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"deprecation_status":     "supported",
 			},
 			"secret/": map[string]interface{}{
 				"description":             "key/value secret storage",
@@ -1280,6 +926,7 @@ func TestSysTuneMount(t *testing.T) {
 				"plugin_version":         "",
 				"running_sha256":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"deprecation_status":     "supported",
 			},
 			"sys/": map[string]interface{}{
 				"description":             "system endpoints used for control, policy and debugging",
@@ -1332,88 +979,9 @@ func TestSysTuneMount(t *testing.T) {
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			},
 		},
-		"foo/": map[string]interface{}{
-			"description":             "foo",
-			"type":                    "kv",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("259196400"),
-				"max_lease_ttl":     json.Number("259200000"),
-				"force_no_cache":    false,
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                map[string]interface{}{"version": "1"},
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
-		},
-		"secret/": map[string]interface{}{
-			"description":             "key/value secret storage",
-			"type":                    "kv",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                map[string]interface{}{"version": "1"},
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
-		},
-		"sys/": map[string]interface{}{
-			"description":             "system endpoints used for control, policy and debugging",
-			"type":                    "system",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Accept"},
-			},
-			"local":                  false,
-			"seal_wrap":              true,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
-		},
-		"cubbyhole/": map[string]interface{}{
-			"description":             "per-token private secret storage",
-			"type":                    "cubbyhole",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-			},
-			"local":                  true,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
-		},
-		"identity/": map[string]interface{}{
-			"description":             "identity store",
-			"type":                    "identity",
-			"external_entropy_access": false,
-			"config": map[string]interface{}{
-				"default_lease_ttl":           json.Number("0"),
-				"max_lease_ttl":               json.Number("0"),
-				"force_no_cache":              false,
-				"passthrough_request_headers": []interface{}{"Authorization"},
-			},
-			"local":                  false,
-			"seal_wrap":              false,
-			"options":                interface{}(nil),
-			"plugin_version":         "",
-			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
-		},
+	}
+	for k, v := range expected["data"].(map[string]interface{}) {
+		expected[k] = v
 	}
 
 	testResponseStatus(t, resp, 200)
@@ -1505,15 +1073,61 @@ func TestSysTuneMount(t *testing.T) {
 		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
 	}
 
+	// Mount a new KV in leased_passthrough mode before testing things specific to that mode
+	// (Changing this by mount tuning is not supported)
+	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/leased-kv", map[string]interface{}{
+		"type":        "kv",
+		"description": "foobar",
+		"config": map[string]interface{}{
+			"default_lease_ttl": "40s",
+			"max_lease_ttl":     "80s",
+		},
+		"options": map[string]interface{}{
+			"leased_passthrough": "true",
+		},
+	})
+	testResponseStatus(t, resp, 204)
+
+	// Confirm its setup
+	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/leased-kv/tune")
+	actual = map[string]interface{}{}
+	expected = map[string]interface{}{
+		"lease_id":       "",
+		"renewable":      false,
+		"lease_duration": json.Number("0"),
+		"wrap_info":      nil,
+		"warnings":       nil,
+		"auth":           nil,
+		"data": map[string]interface{}{
+			"description":       "foobar",
+			"default_lease_ttl": json.Number("40"),
+			"max_lease_ttl":     json.Number("80"),
+			"force_no_cache":    false,
+			"options":           map[string]interface{}{"leased_passthrough": "true"},
+		},
+		"description":       "foobar",
+		"default_lease_ttl": json.Number("40"),
+		"max_lease_ttl":     json.Number("80"),
+		"force_no_cache":    false,
+		"options":           map[string]interface{}{"leased_passthrough": "true"},
+	}
+
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	expected["request_id"] = actual["request_id"]
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
+	}
+
 	// First try with lease above backend max
-	resp = testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
+	resp = testHttpPut(t, token, addr+"/v1/secret/leased-kv", map[string]interface{}{
 		"data": "bar",
 		"ttl":  "28347h",
 	})
 	testResponseStatus(t, resp, 204)
 
 	// read secret
-	resp = testHttpGet(t, token, addr+"/v1/secret/foo")
+	resp = testHttpGet(t, token, addr+"/v1/secret/leased-kv")
 	var result struct {
 		LeaseID       string `json:"lease_id" structs:"lease_id"`
 		LeaseDuration int    `json:"lease_duration" structs:"lease_duration"`
@@ -1531,13 +1145,13 @@ func TestSysTuneMount(t *testing.T) {
 	}
 
 	// Now with lease TTL unspecified
-	resp = testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
+	resp = testHttpPut(t, token, addr+"/v1/secret/leased-kv", map[string]interface{}{
 		"data": "bar",
 	})
 	testResponseStatus(t, resp, 204)
 
 	// read secret
-	resp = testHttpGet(t, token, addr+"/v1/secret/foo")
+	resp = testHttpGet(t, token, addr+"/v1/secret/leased-kv")
 
 	testResponseBody(t, resp, &result)
 

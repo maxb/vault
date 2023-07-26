@@ -283,7 +283,6 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 		logicalBackends[backendName] = backendFactory
 	}
 
-	logicalBackends["kv"] = LeasedPassthroughBackendFactory
 	for backendName, backendFactory := range testLogicalBackends {
 		logicalBackends[backendName] = backendFactory
 	}

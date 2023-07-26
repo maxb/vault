@@ -201,13 +201,7 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 }
 
 func TestCache_ConcurrentRequests(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": vault.LeasedPassthroughBackendFactory,
-		},
-	}
-
-	cleanup, _, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	cleanup, _, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
 	err := testClient.Sys().Mount("kv", &api.MountInput{
@@ -243,15 +237,9 @@ func TestCache_ConcurrentRequests(t *testing.T) {
 }
 
 func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": vault.LeasedPassthroughBackendFactory,
-		},
-	}
-
 	sampleSpace := make(map[string]string)
 
-	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
 	token1 := testClient.Token()
@@ -259,7 +247,8 @@ func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {
 
 	// Mount the kv backend
 	err := testClient.Sys().Mount("kv", &api.MountInput{
-		Type: "kv",
+		Type:    "kv",
+		Options: map[string]string{"leased_passthrough": "true"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -341,15 +330,9 @@ func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {
 }
 
 func TestCache_TokenRevocations_LeafLevelToken(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": vault.LeasedPassthroughBackendFactory,
-		},
-	}
-
 	sampleSpace := make(map[string]string)
 
-	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
 	token1 := testClient.Token()
@@ -357,7 +340,8 @@ func TestCache_TokenRevocations_LeafLevelToken(t *testing.T) {
 
 	// Mount the kv backend
 	err := testClient.Sys().Mount("kv", &api.MountInput{
-		Type: "kv",
+		Type:    "kv",
+		Options: map[string]string{"leased_passthrough": "true"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -438,15 +422,9 @@ func TestCache_TokenRevocations_LeafLevelToken(t *testing.T) {
 }
 
 func TestCache_TokenRevocations_IntermediateLevelToken(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": vault.LeasedPassthroughBackendFactory,
-		},
-	}
-
 	sampleSpace := make(map[string]string)
 
-	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
 	token1 := testClient.Token()
@@ -454,7 +432,8 @@ func TestCache_TokenRevocations_IntermediateLevelToken(t *testing.T) {
 
 	// Mount the kv backend
 	err := testClient.Sys().Mount("kv", &api.MountInput{
-		Type: "kv",
+		Type:    "kv",
+		Options: map[string]string{"leased_passthrough": "true"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -533,15 +512,9 @@ func TestCache_TokenRevocations_IntermediateLevelToken(t *testing.T) {
 }
 
 func TestCache_TokenRevocations_TopLevelToken(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": vault.LeasedPassthroughBackendFactory,
-		},
-	}
-
 	sampleSpace := make(map[string]string)
 
-	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
 	token1 := testClient.Token()
@@ -549,7 +522,8 @@ func TestCache_TokenRevocations_TopLevelToken(t *testing.T) {
 
 	// Mount the kv backend
 	err := testClient.Sys().Mount("kv", &api.MountInput{
-		Type: "kv",
+		Type:    "kv",
+		Options: map[string]string{"leased_passthrough": "true"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -625,16 +599,10 @@ func TestCache_TokenRevocations_TopLevelToken(t *testing.T) {
 }
 
 func TestCache_TokenRevocations_Shutdown(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": vault.LeasedPassthroughBackendFactory,
-		},
-	}
-
 	sampleSpace := make(map[string]string)
 
 	ctx, rootCancelFunc := context.WithCancel(namespace.RootContext(nil))
-	cleanup, _, testClient, leaseCache := setupClusterAndAgent(ctx, t, coreConfig)
+	cleanup, _, testClient, leaseCache := setupClusterAndAgent(ctx, t, nil)
 	defer cleanup()
 
 	token1 := testClient.Token()
@@ -642,7 +610,8 @@ func TestCache_TokenRevocations_Shutdown(t *testing.T) {
 
 	// Mount the kv backend
 	err := testClient.Sys().Mount("kv", &api.MountInput{
-		Type: "kv",
+		Type:    "kv",
+		Options: map[string]string{"leased_passthrough": "true"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -712,15 +681,9 @@ func TestCache_TokenRevocations_Shutdown(t *testing.T) {
 }
 
 func TestCache_TokenRevocations_BaseContextCancellation(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": vault.LeasedPassthroughBackendFactory,
-		},
-	}
-
 	sampleSpace := make(map[string]string)
 
-	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
 	token1 := testClient.Token()
@@ -728,7 +691,8 @@ func TestCache_TokenRevocations_BaseContextCancellation(t *testing.T) {
 
 	// Mount the kv backend
 	err := testClient.Sys().Mount("kv", &api.MountInput{
-		Type: "kv",
+		Type:    "kv",
+		Options: map[string]string{"leased_passthrough": "true"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -905,17 +869,12 @@ func TestCache_Caching_AuthResponse(t *testing.T) {
 }
 
 func TestCache_Caching_LeaseResponse(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": vault.LeasedPassthroughBackendFactory,
-		},
-	}
-
-	cleanup, client, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	cleanup, client, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
 	err := client.Sys().Mount("kv", &api.MountInput{
-		Type: "kv",
+		Type:    "kv",
+		Options: map[string]string{"leased_passthrough": "true"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1004,17 +963,12 @@ func TestCache_Caching_CacheClear(t *testing.T) {
 }
 
 func testCachingCacheClearCommon(t *testing.T, clearType string) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": vault.LeasedPassthroughBackendFactory,
-		},
-	}
-
-	cleanup, client, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	cleanup, client, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
 	err := client.Sys().Mount("kv", &api.MountInput{
-		Type: "kv",
+		Type:    "kv",
+		Options: map[string]string{"leased_passthrough": "true"},
 	})
 	if err != nil {
 		t.Fatal(err)

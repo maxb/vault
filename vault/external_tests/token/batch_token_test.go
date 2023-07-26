@@ -11,24 +11,20 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestBatchTokens(t *testing.T) {
 	t.Parallel()
-	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": vault.LeasedPassthroughBackendFactory,
-		},
-	})
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	rootToken := client.Token()
 	var err error
 
 	// Set up a KV path
 	err = client.Sys().Mount("kv", &api.MountInput{
-		Type: "kv",
+		Type:    "kv",
+		Options: map[string]string{"leased_passthrough": "true"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -193,18 +189,15 @@ path "kv/*" {
 
 func TestBatchToken_ParentLeaseRevoke(t *testing.T) {
 	t.Parallel()
-	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": vault.LeasedPassthroughBackendFactory,
-		},
-	})
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	rootToken := client.Token()
 	var err error
 
 	// Set up a KV path
 	err = client.Sys().Mount("kv", &api.MountInput{
-		Type: "kv",
+		Type:    "kv",
+		Options: map[string]string{"leased_passthrough": "true"},
 	})
 	if err != nil {
 		t.Fatal(err)
