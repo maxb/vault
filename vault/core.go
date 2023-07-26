@@ -1184,10 +1184,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	for k, f := range conf.LogicalBackends {
 		logicalBackends[k] = f
 	}
-	_, ok := logicalBackends["kv"]
-	if !ok {
-		logicalBackends["kv"] = PassthroughBackendFactory
-	}
 
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
 	logicalBackends[systemMountType] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {

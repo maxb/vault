@@ -18,6 +18,7 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/plugins/database/mysql"
@@ -91,6 +92,7 @@ func NewMockBuiltinRegistry() *mockBuiltinRegistry {
 			},
 			"aws":    {PluginType: consts.PluginTypeCredential},
 			"consul": {PluginType: consts.PluginTypeSecrets},
+			"kv":     {PluginType: consts.PluginTypeSecrets},
 		},
 	}
 }
@@ -146,6 +148,8 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 			b.BackendType = logical.TypeLogical
 			return b, nil
 		}), true
+	case "kv":
+		return toFunc(logicalKv.Factory), true
 	default:
 		return nil, false
 	}

@@ -1,7 +1,6 @@
 package minimal
 
 import (
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
@@ -54,9 +53,6 @@ func NewTestSoloCluster(t testing.T, config *vault.CoreConfig) *vault.TestCluste
 		mycfg.LogicalBackends = map[string]logical.Factory{
 			"plugin":   plugin.Factory,
 			"database": logicalDb.Factory,
-			// This is also available in the plugin catalog, but is here due to the need to
-			// automatically mount it.
-			"kv": logicalKv.Factory,
 		}
 	}
 	if mycfg.AuditBackends == nil {

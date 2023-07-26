@@ -3,7 +3,6 @@ package builtinplugins
 import (
 	"testing"
 
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -27,16 +26,8 @@ func TestBuiltinPluginsWork(t *testing.T) {
 		&vault.CoreConfig{
 			BuiltinRegistry: Registry,
 			LogicalBackends: map[string]logical.Factory{
-				// This needs to be here for madly overcomplicated reasons, otherwise we end up mounting a KV v1 even
-				// when we try to explicitly mount a KV v2...
-				//
-				// vault.NewCore hardcodes "kv" to vault.PassthroughBackendFactory if no explicit entry is configured,
-				// and this hardcoding is re-overridden in command.logicalBackends to point back to the real KV plugin.
-				// As far as I can tell, nothing at all relies upon the definition of "kv" in builtinplugins.Registry,
-				// as it always gets resolved via the logicalBackends map and the pluginCatalog is never queried.
-				"kv": logicalKv.Factory,
-				// Semi-similarly, "database" is added in command.logicalBackends and not at all in
-				// builtinplugins.Registry, so we need to add it here to be able to test it!
+				// The "database" backend is somewhat special, presumably because it hosts plugins of its own,
+				// and is not itself present in the registry.
 				"database": logicalDb.Factory,
 			},
 			PendingRemovalMountsAllowed: true,
