@@ -1981,9 +1981,14 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		}
 	}
 
-	kvVer := "2"
+	kvOptions := map[string]string{
+		"version": "2",
+	}
 	if c.flagDevKVV1 || c.flagDevLeasedKV {
-		kvVer = "1"
+		kvOptions["version"] = "1"
+		if c.flagDevLeasedKV {
+			kvOptions["leased_passthrough"] = "true"
+		}
 	}
 	req := &logical.Request{
 		Operation:   logical.UpdateOperation,
@@ -1993,9 +1998,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 			"type":        "kv",
 			"path":        "secret/",
 			"description": "key/value secret storage",
-			"options": map[string]string{
-				"version": kvVer,
-			},
+			"options":     kvOptions,
 		},
 	}
 	resp, err := core.HandleRequest(ctx, req)
@@ -2804,9 +2807,6 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		coreConfig.EnableRaw = true
 		coreConfig.EnableIntrospection = true
 		coreConfig.DevToken = c.flagDevRootTokenID
-		if c.flagDevLeasedKV {
-			coreConfig.LogicalBackends["kv"] = vault.LeasedPassthroughBackendFactory
-		}
 		if c.flagDevPluginDir != "" {
 			coreConfig.PluginDirectory = c.flagDevPluginDir
 		}
