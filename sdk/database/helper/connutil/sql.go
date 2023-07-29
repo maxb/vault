@@ -19,9 +19,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-var _ ConnectionProducer = &SQLConnectionProducer{}
-
-// SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
+// SQLConnectionProducer provides a generic connection producer for most SQL databases. Various database plugins have
+// forked and modified this type to implement their specific needs.
 type SQLConnectionProducer struct {
 	ConnectionURL            string      `json:"connection_url" mapstructure:"connection_url" structs:"connection_url"`
 	MaxOpenConnections       int         `json:"max_open_connections" mapstructure:"max_open_connections" structs:"max_open_connections"`
@@ -64,20 +63,27 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		return nil, fmt.Errorf("username and/or password cannot contain the template variables")
 	}
 
-	// Don't escape special characters for MySQL password
 	// Also don't escape special characters for the username and password if
 	// the disable_escaping parameter is set to true
 	username := c.Username
 	password := c.Password
+
+	// The default assumption is that the username and password will be incorporated
+	// into the userinfo portion of the connection_url URL, which is true for most
+	// database engines. However, with some, connection_url can also be specified in
+	// a non-URL format - e.g. Microsoft SQL, example in
+	// https://github.com/hashicorp/vault/issues/12943. In such a case, turning off
+	// URL escaping will be needed... though then there is a risk the values may
+	// contain characters that disrupt that other format.
 	if !c.DisableEscaping {
-		username = url.PathEscape(c.Username)
-	}
-	if (c.Type != "mysql") && !c.DisableEscaping {
-		password = url.PathEscape(c.Password)
+		// The Go standard library does not provide a direct function for escaping in the
+		// userinfo portion of a URL, so we have to go via this slightly indirect route
+		username = url.User(c.Username).String()
+		password = url.User(c.Password).String()
 	}
 
 	// QueryHelper doesn't do any SQL escaping, but if it starts to do so
-	// then maybe we won't be able to use it to do URL substitution any more.
+	// then maybe we won't be able to use it to do URL substitution anymore.
 	c.ConnectionURL = dbutil.QueryHelper(c.ConnectionURL, map[string]string{
 		"username": username,
 		"password": password,

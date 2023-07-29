@@ -4,20 +4,11 @@
 package connutil
 
 import (
-	"context"
 	"errors"
-	"sync"
 )
 
+// ErrNotInitialized is returned by SQLConnectionProducer.Connection if
+// SQLConnectionProducer.Init has not yet been called. It is also used in an
+// analogous way in the forked copies of SQLConnectionProducer used in some
+// database plugins.
 var ErrNotInitialized = errors.New("connection has not been initialized")
-
-// ConnectionProducer can be used as an embedded interface in the Database
-// definition. It implements the methods dealing with individual database
-// connections and is used in all the builtin database types.
-type ConnectionProducer interface {
-	Close() error
-	Init(context.Context, map[string]interface{}, bool) (map[string]interface{}, error)
-	Connection(context.Context) (interface{}, error)
-
-	sync.Locker
-}
