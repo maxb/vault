@@ -45,11 +45,6 @@ type mySQLConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *mySQLConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
-	_, err := c.Init(ctx, conf, verifyConnection)
-	return err
-}
-
 func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
 	c.Lock()
 	defer c.Unlock()
